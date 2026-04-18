@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crédits</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Raleway:wght@300;400;500&display=swap');
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8d08a;
+    --dark: #0a0a0f;
+    --dark2: #11111a;
+    --text: #e8e0d0;
+    --text-dim: #8a8070;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Raleway', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 999; opacity: 0.4;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
+    pointer-events: none; z-index: 1;
+  }
+
+  #loading {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100; background: var(--dark); gap: 16px;
+  }
+  #loading .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid rgba(201,168,76,0.15);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  #loading p {
+    font-family: 'Cinzel', serif; font-size: 0.7rem;
+    letter-spacing: 0.3em; color: var(--text-dim); text-transform: uppercase;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #error-state {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: var(--dark); flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; text-align: center; padding: 40px;
+  }
+  #error-state h2 {
+    font-family: 'Cinzel', serif; font-size: 1rem;
+    letter-spacing: 0.3em; color: var(--gold);
+  }
+  #error-state p {
+    font-size: 0.82rem; color: var(--text-dim);
+    letter-spacing: 0.08em; max-width: 420px; line-height: 1.8;
+  }
+  #error-state code {
+    font-family: monospace; color: var(--gold-light);
+    font-size: 0.78rem; background: rgba(201,168,76,0.07);
+    padding: 2px 8px; border-radius: 2px;
+  }
+
+  #app { display: none; position: relative; z-index: 2; }
+
+  header { text-align: center; padding: 60px 20px 30px; position: relative; }
+  header::after {
+    content: ''; display: block; width: 80px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 24px auto 0;
+  }
+  .header-eyebrow {
+    font-size: 0.65rem; letter-spacing: 0.5em;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 12px; opacity: 0.8;
+  }
+  .header-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    font-weight: 400; letter-spacing: 0.15em;
+    color: var(--text); text-shadow: 0 0 40px rgba(201,168,76,0.2);
+  }
+
+  #credits-wrapper {
+    position: relative; width: 100%; max-width: 680px;
+    margin: 0 auto; overflow: hidden; height: 70vh;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  }
+
+  #credits-track {
+    text-align: center; padding: 80px 20px;
+    animation: scrollUp 40s linear forwards;
+  }
+  #credits-track.paused { animation-play-state: paused; }
+
+  @keyframes scrollUp {
+    from { transform: translateY(100vh); }
+    to   { transform: translateY(-100%); }
+  }
+
+  .credit-line {
+    font-weight: 300; font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+    letter-spacing: 0.08em; color: var(--text); line-height: 1.9;
+  }
+  .credit-line.section-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.72rem, 1.5vw, 0.88rem);
+    letter-spacing: 0.4em; color: var(--gold);
+    text-transform: uppercase; margin: 32px 0 8px; opacity: 0.85;
+  }
+  .credit-line.empty { display: block; height: 1.5em; }
+  .credit-divider {
+    display: block; width: 40px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-light), transparent);
+    margin: 20px auto; opacity: 0.4;
+  }
+
+  #controls {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%); z-index: 50;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .btn {
+    font-family: 'Raleway', sans-serif; font-size: 0.7rem;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    padding: 10px 22px; border: 1px solid;
+    cursor: pointer; transition: all 0.25s ease; background: transparent;
+  }
+  .btn-pause { border-color: rgba(201,168,76,0.35); color: var(--gold); }
+  .btn-pause:hover { background: rgba(201,168,76,0.08); border-color: var(--gold); }
+  .btn-report { border-color: rgba(180,60,60,0.35); color: #c87070; }
+  .btn-report:hover { background: rgba(180,60,60,0.08); border-color: #c87070; }
+
+  #modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 200;
+    backdrop-filter: blur(4px); align-items: center; justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+  #modal {
+    background: var(--dark2); border: 1px solid rgba(201,168,76,0.2);
+    padding: 40px; max-width: 480px; width: 90%; position: relative;
+  }
+  #modal::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  #modal h2 {
+    font-family: 'Cinzel', serif; font-size: 1rem;
+    letter-spacing: 0.25em; color: var(--gold); margin-bottom: 6px;
+  }
+  #modal p.sub { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 28px; letter-spacing: 0.05em; }
+  #modal label {
+    display: block; font-size: 0.68rem; letter-spacing: 0.3em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;
+  }
+  #modal textarea, #modal input {
+    width: 100%; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1); color: var(--text);
+    font-family: 'Raleway', sans-serif; font-size: 0.9rem;
+    padding: 12px 14px; outline: none; transition: border-color 0.2s;
+    resize: none; margin-bottom: 20px;
+  }
+  #modal textarea:focus, #modal input:focus { border-color: rgba(201,168,76,0.4); }
+  #modal textarea { height: 110px; }
+  .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+  .btn-send { border-color: rgba(201,168,76,0.5); color: var(--gold); }
+  .btn-send:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-cancel { border-color: rgba(255,255,255,0.1); color: var(--text-dim); }
+  .btn-cancel:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  #modal-status {
+    font-size: 0.75rem; letter-spacing: 0.1em;
+    margin-top: 14px; min-height: 1.2em; text-align: center;
+  }
+  #modal-status.success { color: #7db87d; }
+  #modal-status.error   { color: #c87070; }
+
+  /* ── END SCREEN ── */
+  #end-screen {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(10,10,15,0.92); backdrop-filter: blur(6px);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 24px; text-align: center;
+  }
+  #end-screen.visible { display: flex; animation: fadeIn 1.2s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #end-screen h2 {
+    font-family: 'Cinzel', serif; font-size: clamp(1rem, 2.5vw, 1.4rem);
+    letter-spacing: 0.3em; color: var(--gold); font-weight: 400;
+  }
+  #end-screen p {
+    font-size: 0.8rem; color: var(--text-dim); letter-spacing: 0.15em;
+  }
+  .btn-replay {
+    font-family: 'Raleway', sans-serif; font-size: 0.72rem;
+    letter-spacing: 0.35em; text-transform: uppercase;
+    padding: 12px 32px; border: 1px solid rgba(201,168,76,0.5);
+    color: var(--gold); cursor: pointer; background: transparent;
+    transition: all 0.25s ease; margin-top: 8px;
+  }
+  .btn-replay:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Chargement des crédits</p>
+</div>
+
+<div id="error-state">
+  <h2>ERREUR DE CHARGEMENT</h2>
+  <p id="error-msg"></p>
+  <p style="margin-top:12px;">Exemple d'URL valide :<br><code>credits.html?video=ParkourFinal</code></p>
+</div>
+
+<div id="app">
+  <header>
+    <p class="header-eyebrow">Production</p>
+    <h1 class="header-title" id="video-title">CRÉDITS</h1>
+  </header>
+  <div id="credits-wrapper">
+    <div id="credits-track"></div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="btn btn-pause" id="btn-pause" onclick="togglePause()">⏸ Pause</button>
+  <button class="btn btn-report" onclick="openModal()">⚠ Signaler un crédit manquant</button>
+</div>
+
+<div id="modal-overlay">
+  <div id="modal">
+    <h2>SIGNALER UN PROBLÈME</h2>
+    <p class="sub">Un crédit manquant ou incorrect ? Décris-le ci-dessous.</p>
+    <label>Ton nom (optionnel)</label>
+    <input type="text" id="reporter-name" placeholder="ex: Jean Dupont" />
+    <label>Description du problème *</label>
+    <textarea id="report-message" placeholder="ex: Le nom de la chorégraphe principale est manquant..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-send" id="btn-send" onclick="sendReport()">Envoyer</button>
+    </div>
+    <p id="modal-status"></p>
+  </div>
+</div>
+
+<div id="end-screen">
+  <h2>FIN DES CRÉDITS</h2>
+  <p>Tous les crédits ont défilé.</p>
+  <button class="btn-replay" onclick="replayCredits()">↺ Revoir les crédits</button>
+</div>
+
+<script>
+  // ════════════════════════════════════════════════
+  //  ⚙️  CONFIGURATION
+  // ════════════════════════════════════════════════
+  const CONFIG = {
+    // URL de ton Apps Script déployé comme Web App
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyNyXDuIOXvLP_LtGPCP-Bu_CLGyOI6hECqN_kpWdM7wREyQULjTl8Sv4pszneEdl_Z/exec',
+
+    SCROLL_DURATION:     30,
+    EMAILJS_PUBLIC_KEY:  'NxGFGvdon1YudMbyy',
+    EMAILJS_SERVICE_ID:  'service_w8dgapk',
+    EMAILJS_TEMPLATE_ID: 'template_t968ifo',
+    TO_EMAIL:            'webradiolesmartinets@gmail.com',
+  };
+  // ════════════════════════════════════════════════
+
+  let isPaused = false;
+  emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const sheetName = urlParams.get('video');
+
+  if (!sheetName) {
+    showError('Aucun paramètre <code>video</code> fourni dans l\'URL.');
+  } else {
+    loadCredits(sheetName);
+  }
+
+  async function loadCredits(sheet) {
+    const url = `${CONFIG.APPS_SCRIPT_URL}?video=${encodeURIComponent(sheet)}`;
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderCredits(data.lines, data.duration);
+    } catch(e) {
+      showError(`Impossible de charger l'onglet <code>${sheet}</code>.<br>${e.message}`);
+    }
+  }
+
+  function renderCredits(lines, sheetDuration) {
+    const track = document.getElementById('credits-track');
+    track.innerHTML = '';
+    let titleSet = false;
+
+    lines.forEach(line => {
+      if (!titleSet && line.trim() !== '') {
+        document.getElementById('video-title').textContent = line.trim().toUpperCase();
+        titleSet = true;
+        return;
+      }
+
+      if (line.trim() === '') {
+        const el = document.createElement('span');
+        el.className = 'credit-line empty';
+        track.appendChild(el);
+        return;
+      }
+
+      if (line.startsWith('##')) {
+        const div = document.createElement('span');
+        div.className = 'credit-divider';
+        track.appendChild(div);
+        const el = document.createElement('p');
+        el.className = 'credit-line section-title';
+        el.textContent = line.replace(/^##\s*/, '');
+        track.appendChild(el);
+        return;
+      }
+
+      const el = document.createElement('p');
+      el.className = 'credit-line';
+      el.textContent = line;
+      track.appendChild(el);
+    });
+
+    const duration = sheetDuration || CONFIG.SCROLL_DURATION;
+    track.style.animationDuration = duration + 's';
+    track._duration = duration;
+
+    // Détection fin de défilement
+    attachEndListener(track);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-msg').innerHTML = msg;
+    document.getElementById('error-state').style.display = 'flex';
+  }
+
+  function togglePause() {
+    const track = document.getElementById('credits-track');
+    const btn   = document.getElementById('btn-pause');
+    isPaused = !isPaused;
+    track.classList.toggle('paused', isPaused);
+    btn.textContent = isPaused ? '▶ Reprendre' : '⏸ Pause';
+  }
+
+  function openModal() {
+    document.getElementById('credits-track').classList.add('paused');
+    document.getElementById('modal-overlay').classList.add('open');
+    document.getElementById('modal-status').textContent = '';
+    document.getElementById('modal-status').className = '';
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    document.getElementById('report-message').value = '';
+    document.getElementById('reporter-name').value  = '';
+    if (!isPaused) document.getElementById('credits-track').classList.remove('paused');
+  }
+
+  async function sendReport() {
+    const msg = document.getElementById('report-message').value.trim();
+    if (!msg) {
+      const s = document.getElementById('modal-status');
+      s.textContent = 'Décris le problème avant d\'envoyer.';
+      s.className = 'error';
+      return;
+    }
+    const btn = document.getElementById('btn-send');
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+    try {
+      await emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, {
+        to_email:    CONFIG.TO_EMAIL,
+        from_name:   document.getElementById('reporter-name').value.trim() || 'Anonyme',
+        video_title: document.getElementById('video-title').textContent,
+        sheet_name:  sheetName,
+        message:     msg,
+      });
+      const s = document.getElementById('modal-status');
+      s.textContent = 'Signalement envoyé. Merci.';
+      s.className = 'success';
+      setTimeout(closeModal, 2000);
+    } catch(e) {
+      const s = document.getElementById('modal-status');
+      console.log('EmailJS error:', JSON.stringify(e));
+      s.textContent = 'Erreur : ' + (e.text || e.status || JSON.stringify(e));
+      s.className = 'error';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Envoyer';
+    }
+  }
+
+  function attachEndListener(track) {
+    track.addEventListener('animationend', () => {
+      document.getElementById('end-screen').classList.add('visible');
+      document.getElementById('controls').style.display = 'none';
+    }, { once: true });
+  }
+
+  function replayCredits() {
+    const track = document.getElementById('credits-track');
+    document.getElementById('end-screen').classList.remove('visible');
+    document.getElementById('controls').style.display = 'flex';
+    isPaused = false;
+    document.getElementById('btn-pause').textContent = '⏸ Pause';
+    track.classList.remove('paused');
+    track.style.animation = 'none';
+    track.offsetHeight;
+    track.style.animation = '';
+    track.style.animationDuration = (track._duration || 30) + 's';
+    attachEndListener(track);
+  }
+</script>
+</body>
+</html>
