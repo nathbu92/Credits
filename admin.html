@@ -160,6 +160,22 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── EDITOR LOADER ── */
+  #editor-loader {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 60px 20px;
+    text-align: center;
+  }
+  #editor-loader.visible { display: flex; }
+  #editor-loader p { font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase; }
+  #editor-loader small { font-size: 0.68rem; color: var(--text-dim); opacity: 0.5; letter-spacing: 0.12em; }
+  #editor-fields { display: none; }
+  #editor-fields.visible { display: block; }
+
   .divider {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(201,168,76,0.15), transparent);
@@ -217,6 +233,13 @@
         </div>
       </div>
 
+      <div id="editor-loader">
+        <div class="spinner"></div>
+        <p>Chargement des crédits…</p>
+        <small>Synchronisation avec le serveur</small>
+      </div>
+
+      <div id="editor-fields">
       <div class="field-group">
         <label>Nom de l'onglet (identifiant URL)</label>
         <input type="text" id="edit-name" />
@@ -233,6 +256,8 @@
         <textarea id="edit-lines" spellcheck="false"></textarea>
         <p class="field-hint">Ligne 1 = titre · ## Section = titre doré · Ligne vide = espace</p>
       </div>
+
+      </div><!-- /editor-fields -->
 
       <div class="editor-actions">
         <button class="btn btn-gold" id="btn-save" onclick="saveEdit()">Enregistrer</button>
@@ -280,7 +305,7 @@
 <div id="toast"></div>
 
 <script>
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybtmHWgoVybTwgsXUWt9sofu67wyPgB8Z8L2rm8UEfzKBhf7lYIJubu87ZS7llO4Uw/exec';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyNyXDuIOXvLP_LtGPCP-Bu_CLGyOI6hECqN_kpWdM7wREyQULjTl8Sv4pszneEdl_Z/exec';
   // URL de base pour les liens crédits (même dossier)
   const BASE_URL = window.location.href.replace('admin.html', 'index.html');
 
@@ -384,10 +409,14 @@
           <div class="video-item-meta">${escHtml(s.name)} · ${s.duration}s · ${s.lines} lignes</div>
         </div>
         <div class="item-btns">
-          <button class="btn btn-dim btn-sm" onclick="openEditor('${escHtml(s.name)}')">Modifier</button>
+          <button class="btn btn-dim btn-sm" data-name="${esc2(s.name)}">Modifier</button>
         </div>
       `;
       list.appendChild(div);
+    });
+    // Délégation de clic sur les boutons Modifier
+    list.querySelectorAll('[data-name]').forEach(btn => {
+      btn.addEventListener('click', () => openEditor(btn.getAttribute('data-name')));
     });
   }
 
@@ -399,6 +428,10 @@
     document.getElementById('editor-heading').textContent = 'Modifier : ' + name;
     document.getElementById('editor-sheetname').textContent = 'Onglet : ' + name;
     document.getElementById('edit-name').value = name;
+    // Show loader, hide fields
+    document.getElementById('editor-loader').classList.add('visible');
+    document.getElementById('editor-fields').classList.remove('visible');
+    document.getElementById('edit-url-box').classList.remove('visible');
     document.getElementById('edit-name').oninput = () => {
       document.getElementById('hint-name').textContent = document.getElementById('edit-name').value || '…';
     };
@@ -418,6 +451,10 @@
     const link = document.getElementById('edit-url-link');
     link.href = url; link.textContent = url;
     document.getElementById('edit-url-box').classList.add('visible');
+
+    // Hide loader, show fields
+    document.getElementById('editor-loader').classList.remove('visible');
+    document.getElementById('editor-fields').classList.add('visible');
   }
 
   async function saveEdit() {
@@ -499,11 +536,9 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
 
-      const url = `${BASE_URL}?video=${encodeURIComponent(name)}`;
-      const link = document.getElementById('create-url-link');
-      link.href = url; link.textContent = url;
-      document.getElementById('create-url-box').classList.add('visible');
       toast('Vidéo créée ✓', 'success');
+      // Ouvrir l'éditeur pour la nouvelle vidéo
+      setTimeout(() => openEditor(name), 600);
     } catch(e) {
       toast('Erreur : ' + e.message, 'error');
     } finally {
@@ -524,6 +559,10 @@
 
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function esc2(str) {
+    return String(str).replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
   initAuth();
